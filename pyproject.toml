@@ -1,0 +1,40 @@
+[project]
+name = "dify-helm-chart-generator"
+version = "1.0.0"
+description = "Dify Helm Chart Values Generator - Interactive script to generate values-prd.yaml"
+readme = "README-GENERATOR.md"
+requires-python = ">=3.6"
+authors = [
+    {name = "Dify Team"}
+]
+keywords = ["dify", "helm", "kubernetes", "yaml", "generator"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pyyaml>=5.4.0",
+    "ruamel.yaml>=0.18.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
+
+[project.scripts]
+generate-values-prd = "generate-values-prd:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+

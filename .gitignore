@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+values-test*.yaml
+*.log
+
+# Generated configuration files (may contain sensitive data)
+values-prd.yaml
+
+# Sensitive files
+email-server.txt
+*password*
+*secret*
+*.key
+*.pem
+
+# Temporary files
+*.tmp
+*.bak
+values-prd.yaml
