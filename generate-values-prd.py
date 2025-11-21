@@ -1167,10 +1167,191 @@ class ValuesGenerator:
                     default=False
                 )
     
-    # ==================== 模块 5: 服务配置 ====================
+    # ==================== 模块 5: 插件配置 ====================
+    def configure_plugins(self):
+        """配置插件"""
+        print_header("模块 5: 插件配置 (Plugin Configuration)")
+        
+        # Plugin Connector 镜像仓库配置
+        print_section("Plugin Connector 镜像仓库配置")
+        print_info("配置插件连接器的镜像仓库设置")
+        
+        # 确保 plugin_connector 配置存在
+        if 'plugin_connector' not in self.values:
+            self.values['plugin_connector'] = {}
+        
+        # 先选择镜像仓库类型
+        image_repo_type = prompt_choice(
+            "镜像仓库类型",
+            ["docker", "ecr"],
+            default=self.values.get('plugin_connector', {}).get('imageRepoType', 'docker')
+        )
+        self.values['plugin_connector']['imageRepoType'] = image_repo_type
+        
+        # 如果是 ECR，需要配置区域、账户ID和鉴权方式
+        ecr_region = None
+        ecr_account_id = None
+        ecr_auth_method = None
+        if image_repo_type == "ecr":
+            ecr_region = prompt(
+                "ECR 区域 (ECR Region)",
+                default=self.values.get('plugin_connector', {}).get('ecrRegion', 'us-east-1'),
+                required=False
+            )
+            self.values['plugin_connector']['ecrRegion'] = ecr_region if ecr_region else "us-east-1"
+            print_info(f"ECR 区域已设置为: {self.values['plugin_connector']['ecrRegion']}")
+            
+            # 获取 ECR 账户ID
+            ecr_account_id = prompt(
+                "ECR 账户ID (AWS Account ID)",
+                default="",
+                required=False
+            )
+            
+            # imageRepoPrefix: 镜像仓库前缀（在账户ID之后配置）
+            # ECR 格式: {account_id}.dkr.ecr.{region}.amazonaws.com/{prefix}
+            if ecr_account_id and ecr_region:
+                default_prefix = f"{ecr_account_id}.dkr.ecr.{ecr_region}.amazonaws.com"
+            else:
+                default_prefix = "{account_id}.dkr.ecr.{region}.amazonaws.com"
+            print_info("ECR 镜像仓库前缀格式: {account_id}.dkr.ecr.{region}.amazonaws.com/{prefix}")
+            print_info("注意: {prefix} 部分是可选的，例如 dify-ee 或其他命名空间")
+            print_info(f"示例: 123456789012.dkr.ecr.us-east-1.amazonaws.com")
+            print_info(f"示例（带前缀）: 123456789012.dkr.ecr.us-east-1.amazonaws.com/dify-ee")
+            
+            image_repo_prefix = prompt(
+                "镜像仓库前缀 (Image Repo Prefix)",
+                default=default_prefix,
+                required=False
+            )
+            self.values['plugin_connector']['imageRepoPrefix'] = image_repo_prefix if image_repo_prefix else default_prefix
+            
+            # 选择 ECR 鉴权方式
+            print_info("")
+            print_info("=" * 60)
+            print_info("ECR 鉴权方式配置")
+            print_info("=" * 60)
+            print_info("Dify 支持两种方式访问 AWS ECR：")
+            print_info("  1. IRSA 模式（推荐）：使用 IAM Roles for Service Accounts，更安全")
+            print_info("  2. K8s Secret 模式：使用 Kubernetes Secret 存储凭证")
+            print_info("=" * 60)
+            print_info("")
+            
+            ecr_auth_method = prompt_choice(
+                "ECR 鉴权方式",
+                ["IRSA 模式（推荐）", "K8s Secret 模式"],
+                default="IRSA 模式（推荐）"
+            )
+            
+            if ecr_auth_method == "IRSA 模式（推荐）":
+                print_info("")
+                print_info("=" * 60)
+                print_info("IRSA 模式配置说明")
+                print_info("=" * 60)
+                print_info("IRSA (IAM Roles for Service Accounts) 是 AWS 推荐的安全认证方式。")
+                print_info("详细配置方法请参考：")
+                print_info("https://enterprise-docs.dify.ai/versions/3-0-x/zh-cn/deployment/cloud-infrastructure/aws-setup#三、irsa-模式配置")
+                print_info("")
+                print_info("需要配置以下 ServiceAccount：")
+                print_info("  - customServiceAccount: 用于插件构建的 ServiceAccount")
+                print_info("  - runnerServiceAccount: 用于插件运行的 ServiceAccount")
+                print_info("=" * 60)
+                print_info("")
+                
+                # 配置 customServiceAccount
+                custom_service_account = prompt(
+                    "customServiceAccount (插件构建 ServiceAccount)",
+                    default=self.values.get('plugin_connector', {}).get('customServiceAccount', ''),
+                    required=False
+                )
+                self.values['plugin_connector']['customServiceAccount'] = custom_service_account if custom_service_account else ""
+                
+                # 配置 runnerServiceAccount
+                runner_service_account = prompt(
+                    "runnerServiceAccount (插件运行 ServiceAccount)",
+                    default=self.values.get('plugin_connector', {}).get('runnerServiceAccount', ''),
+                    required=False
+                )
+                self.values['plugin_connector']['runnerServiceAccount'] = runner_service_account if runner_service_account else ""
+                
+            else:  # K8s Secret 模式
+                print_info("")
+                print_info("=" * 60)
+                print_info("K8s Secret 模式配置说明")
+                print_info("=" * 60)
+                print_info("使用 Kubernetes Secret 存储 AWS 凭证来访问 ECR。")
+                print_info("imageRepoSecret 是一个 Kubernetes Secret，用于存放访问 AWS ECR 的认证信息。")
+                print_info("该 Secret 需要在部署前创建，详细配置方法请参考：")
+                print_info("https://enterprise-docs.dify.ai/versions/3-0-x/zh-cn/deployment/cloud-infrastructure/aws-setup#步骤-2：创建-kubernetes-secret")
+                print_info("")
+                print_info("注意: imageRepoSecret 的值需要与实际部署的 K8s Secret 一致。")
+                print_info("参考方案中默认是: image-repo-secret")
+                print_info("=" * 60)
+                print_info("")
+                
+                image_repo_secret = prompt(
+                    "镜像仓库 Secret 名称",
+                    default=self.values.get('plugin_connector', {}).get('imageRepoSecret', 'image-repo-secret'),
+                    required=False
+                )
+                self.values['plugin_connector']['imageRepoSecret'] = image_repo_secret if image_repo_secret else "image-repo-secret"
+        else:
+            # Docker 模式的镜像仓库前缀配置
+            default_prefix = self.values.get('plugin_connector', {}).get('imageRepoPrefix', 'docker.io/your-image-repo-prefix')
+            print_info("镜像仓库前缀示例: docker.io/your-image-repo-prefix 或 registry.example.com/namespace")
+            
+            image_repo_prefix = prompt(
+                "镜像仓库前缀 (Image Repo Prefix)",
+                default=default_prefix,
+                required=False
+            )
+            self.values['plugin_connector']['imageRepoPrefix'] = image_repo_prefix if image_repo_prefix else default_prefix
+        
+        # imageRepoSecret: 镜像仓库的 Secret 名称（Docker 模式）
+        # ECR 的 K8s Secret 模式已在上面处理，这里只处理 Docker 模式
+        if image_repo_type != "ecr":
+            print_info("")
+            print_info("=" * 60)
+            print_info("镜像仓库 Secret 配置说明")
+            print_info("=" * 60)
+            print_info("imageRepoSecret 是一个 Kubernetes Secret，用于存放访问容器镜像仓库的认证信息。")
+            print_info("该 Secret 需要在部署前创建，详细配置方法请参考：")
+            print_info("https://enterprise-docs.dify.ai/versions/3-0-x/zh-cn/deployment/advanced-configuration/container-registry-for-plugins#如何配置容器镜像仓库")
+            print_info("")
+            print_info("注意: imageRepoSecret 的值需要与实际部署的 K8s Secret 一致。")
+            print_info("参考方案中默认是: image-repo-secret")
+            print_info("=" * 60)
+            print_info("")
+            image_repo_secret = prompt(
+                "镜像仓库 Secret 名称",
+                default=self.values.get('plugin_connector', {}).get('imageRepoSecret', 'image-repo-secret'),
+                required=False
+            )
+            self.values['plugin_connector']['imageRepoSecret'] = image_repo_secret if image_repo_secret else "image-repo-secret"
+        elif image_repo_type == "ecr" and ecr_auth_method == "IRSA 模式（推荐）":
+            # IRSA 模式不需要 imageRepoSecret
+            if 'imageRepoSecret' in self.values.get('plugin_connector', {}):
+                del self.values['plugin_connector']['imageRepoSecret']
+        
+        # insecureImageRepo: 选择镜像仓库协议类型
+        print_info("")
+        print_warning("注意: HTTP 协议不推荐使用，仅作为备选方案")
+        protocol_choice = prompt_choice(
+            "镜像仓库协议类型",
+            ["HTTPS (推荐)", "HTTP (不推荐，仅备选)"],
+            default="HTTPS (推荐)"
+        )
+        insecure_repo = (protocol_choice == "HTTP (不推荐，仅备选)")
+        self.values['plugin_connector']['insecureImageRepo'] = insecure_repo
+        if insecure_repo:
+            print_warning("已选择 HTTP 协议（不推荐）")
+        else:
+            print_success("已选择 HTTPS 协议（推荐）")
+    
+    # ==================== 模块 6: 服务配置 ====================
     def configure_services(self):
         """配置服务"""
-        print_header("模块 5: 服务配置 (Services Configuration)")
+        print_header("模块 6: 服务配置 (Services Configuration)")
         
         # Enterprise 相关配置
         if self.values.get('enterprise', {}).get('enabled', True):
@@ -1201,57 +1382,6 @@ class ValuesGenerator:
                 self.values['enterprise']['licenseServer'] = "https://licenses.dify.ai/server"
                 print_info(f"License 服务器 URL: {self.values['enterprise']['licenseServer']}")
         
-        # Plugin Connector 镜像仓库配置
-        print_section("Plugin Connector 镜像仓库配置")
-        print_info("配置插件连接器的镜像仓库设置")
-        
-        if prompt_yes_no("是否配置 Plugin Connector 镜像仓库?", default=False):
-            # 确保 plugin_connector 配置存在
-            if 'plugin_connector' not in self.values:
-                self.values['plugin_connector'] = {}
-            
-            # insecureImageRepo: 如果镜像仓库不使用 https 协议，设置为 true
-            insecure_repo = prompt_yes_no(
-                "镜像仓库是否不使用 HTTPS 协议? (如果使用 http:// 或私有仓库需要认证，选择 yes)",
-                default=self.values.get('plugin_connector', {}).get('insecureImageRepo', False)
-            )
-            self.values['plugin_connector']['insecureImageRepo'] = insecure_repo
-            
-            # imageRepoSecret: 镜像仓库的 Secret 名称
-            image_repo_secret = prompt(
-                "镜像仓库 Secret 名称",
-                default=self.values.get('plugin_connector', {}).get('imageRepoSecret', 'image-repo-secret'),
-                required=False
-            )
-            self.values['plugin_connector']['imageRepoSecret'] = image_repo_secret if image_repo_secret else "image-repo-secret"
-            
-            # imageRepoPrefix: 镜像仓库前缀
-            print_info("镜像仓库前缀示例: docker.io/your-image-repo-prefix 或 registry.example.com/namespace")
-            image_repo_prefix = prompt(
-                "镜像仓库前缀 (Image Repo Prefix)",
-                default=self.values.get('plugin_connector', {}).get('imageRepoPrefix', 'docker.io/your-image-repo-prefix'),
-                required=False
-            )
-            self.values['plugin_connector']['imageRepoPrefix'] = image_repo_prefix if image_repo_prefix else "docker.io/your-image-repo-prefix"
-            
-            # imageRepoType: docker / ecr
-            image_repo_type = prompt_choice(
-                "镜像仓库类型",
-                ["docker", "ecr"],
-                default=self.values.get('plugin_connector', {}).get('imageRepoType', 'docker')
-            )
-            self.values['plugin_connector']['imageRepoType'] = image_repo_type
-            
-            # 如果是 ECR，需要配置区域
-            if image_repo_type == "ecr":
-                ecr_region = prompt(
-                    "ECR 区域 (ECR Region)",
-                    default=self.values.get('plugin_connector', {}).get('ecrRegion', 'us-east-1'),
-                    required=False
-                )
-                self.values['plugin_connector']['ecrRegion'] = ecr_region if ecr_region else "us-east-1"
-                print_info(f"ECR 区域已设置为: {self.values['plugin_connector']['ecrRegion']}")
-        
         print_section("服务启用状态")
         print_info("可以跳过此部分使用默认值，或根据需要调整")
         
@@ -1281,6 +1411,7 @@ class ValuesGenerator:
             self.configure_infrastructure()
             self.configure_networking()
             self.configure_mail()
+            self.configure_plugins()
             self.configure_services()
             
             # 保存文件

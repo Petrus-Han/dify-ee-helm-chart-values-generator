@@ -132,7 +132,52 @@
 
 ---
 
-### 模块 5: 服务配置 (Services Configuration)
+### 模块 5: 插件配置 (Plugin Configuration)
+**影响范围**: 插件系统的镜像仓库和认证
+
+**配置项**:
+- `plugin_connector.imageRepoType`: 镜像仓库类型
+  - `docker`: Docker Hub 或其他兼容 Docker 的仓库
+  - `ecr`: AWS ECR
+- `plugin_connector.imageRepoPrefix`: 镜像仓库前缀
+  - Docker格式: `docker.io/your-image-repo-prefix` 或 `registry.example.com/namespace`
+  - ECR格式: `{account_id}.dkr.ecr.{region}.amazonaws.com/{prefix}`（prefix可选）
+- `plugin_connector.imageRepoSecret`: 镜像仓库 Secret 名称（K8s Secret 模式）
+- `plugin_connector.insecureImageRepo`: 是否不使用 HTTPS 协议（不推荐）
+- `plugin_connector.ecrRegion`: ECR 区域（如果使用 ECR）
+- `plugin_connector.customServiceAccount`: 插件构建 ServiceAccount（IRSA 模式）
+- `plugin_connector.runnerServiceAccount`: 插件运行 ServiceAccount（IRSA 模式）
+
+**ECR 鉴权方式**:
+- **IRSA 模式（推荐）**: 使用 IAM Roles for Service Accounts
+  - 需要配置 `customServiceAccount` 和 `runnerServiceAccount`
+  - 详细配置参考: https://enterprise-docs.dify.ai/versions/3-0-x/zh-cn/deployment/cloud-infrastructure/aws-setup#三、irsa-模式配置
+  - 不需要配置 `imageRepoSecret`
+- **K8s Secret 模式**: 使用 Kubernetes Secret 存储 AWS 凭证
+  - 需要配置 `imageRepoSecret`
+  - 详细配置参考: https://enterprise-docs.dify.ai/versions/3-0-x/zh-cn/deployment/cloud-infrastructure/aws-setup#步骤-2：创建-kubernetes-secret
+
+**配置顺序**:
+1. 选择镜像仓库类型（docker/ecr）
+2. 如果选择 ECR：
+   - 配置 ECR 区域
+   - 配置 ECR 账户ID
+   - 配置镜像仓库前缀（自动生成格式）
+3. 配置镜像仓库前缀（Docker 模式）
+4. 如果选择 ECR，选择鉴权方式：
+   - IRSA 模式：配置 ServiceAccount
+   - K8s Secret 模式：配置 imageRepoSecret
+5. 如果选择 Docker，配置 imageRepoSecret
+6. 选择协议类型（HTTPS/HTTP）
+
+**联动关系**:
+- ECR 模式需要根据鉴权方式配置不同的字段
+- IRSA 模式不需要 imageRepoSecret
+- K8s Secret 模式需要 imageRepoSecret
+
+---
+
+### 模块 6: 服务配置 (Services Configuration)
 **服务列表**:
 - `api`: API服务
 - `worker`: 工作进程
@@ -174,7 +219,8 @@
 2. **基础设施配置** → 配置数据库、缓存、存储
 3. **网络配置** → 配置Ingress和TLS
 4. **邮件配置** → 配置邮件服务（可选）
-5. **服务配置** → 调整服务启用状态和Enterprise配置
+5. **插件配置** → 配置插件镜像仓库和认证
+6. **服务配置** → 调整服务启用状态和Enterprise配置
 
 ### 关键联动点检查清单
 

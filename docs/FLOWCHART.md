@@ -11,7 +11,8 @@ flowchart TD
     Module1 --> Module2[模块2: 基础设施配置]
     Module2 --> Module3[模块3: 网络配置]
     Module3 --> Module4[模块4: 邮件配置]
-    Module4 --> Module5[模块5: 服务配置]
+    Module4 --> Module5[模块5: 插件配置]
+    Module5 --> Module6[模块6: 服务配置]
     
     Module5 --> CheckFile{文件是否存在?}
     CheckFile -->|是| AskOverwrite{是否覆盖?}
@@ -192,11 +193,45 @@ flowchart TD
     style End fill:#E6F3FF
 ```
 
-## 模块5: 服务配置流程图
+## 模块5: 插件配置流程图
 
 ```mermaid
 flowchart TD
-    Start([模块5开始]) --> CheckEnterprise{Enterprise<br/>已启用?}
+    Start([模块5开始]) --> RepoType[选择镜像仓库类型<br/>docker/ecr]
+    
+    RepoType --> TypeCheck{仓库类型?}
+    
+    TypeCheck -->|docker| DockerPrefix[配置镜像仓库前缀<br/>docker.io/your-image-repo-prefix]
+    TypeCheck -->|ecr| ECRRegion[配置ECR区域<br/>us-east-1等]
+    
+    ECRRegion --> ECRAccount[配置ECR账户ID<br/>AWS Account ID]
+    
+    ECRAccount --> ECRPrefix[配置镜像仓库前缀<br/>{account_id}.dkr.ecr.{region}.amazonaws.com/{prefix}]
+    
+    ECRPrefix --> AuthMethod{ECR鉴权方式?}
+    DockerPrefix --> DockerSecret
+    
+    AuthMethod -->|IRSA模式| IRSAServiceAccount[配置ServiceAccount<br/>customServiceAccount<br/>runnerServiceAccount]
+    AuthMethod -->|K8s Secret| ECRSecret[配置imageRepoSecret<br/>参考AWS文档]
+    
+    IRSAServiceAccount --> Protocol
+    ECRSecret --> Protocol
+    DockerSecret[配置imageRepoSecret<br/>参考容器镜像仓库文档] --> Protocol
+    
+    Protocol[选择协议类型<br/>HTTPS推荐/HTTP不推荐] --> End([模块5完成])
+    
+    style Start fill:#E6F3FF
+    style End fill:#E6F3FF
+    style TypeCheck fill:#FFF4E6
+    style AuthMethod fill:#FFF4E6
+    style Protocol fill:#FFE6E6
+```
+
+## 模块6: 服务配置流程图
+
+```mermaid
+flowchart TD
+    Start([模块6开始]) --> CheckEnterprise{Enterprise<br/>已启用?}
     
     CheckEnterprise -->|是| GenEnterpriseKeys[自动生成Enterprise密钥<br/>appSecretKey: 42字节<br/>adminAPIsSecretKeySalt: 42字节<br/>passwordEncryptionKey: 32字节]
     
@@ -214,7 +249,7 @@ flowchart TD
     ServiceToggle -->|是| ToggleServices[逐个配置服务<br/>api, worker, web等<br/>enterprise, enterpriseAudit等]
     ServiceToggle -->|否| End
     
-    ToggleServices --> End([模块5完成])
+    ToggleServices --> End([模块6完成])
     
     style Start fill:#E6F3FF
     style End fill:#E6F3FF
@@ -262,9 +297,16 @@ flowchart TD
     M4[模块4: 邮件] --> M4Q1{邮件类型}
     M4Q1 --> M5
     
-    M5[模块5: 服务] --> M5Q1{Enterprise配置}
-    M5Q1 --> M5Q2{服务状态}
-    M5Q2 --> Save
+    M5[模块5: 插件] --> M5Q1{镜像仓库类型}
+    M5Q1 -->|docker| M5Q1A[配置Docker]
+    M5Q1 -->|ecr| M5Q1B[配置ECR]
+    M5Q1A --> M5Q2{鉴权方式}
+    M5Q1B --> M5Q2{鉴权方式}
+    M5Q2 --> M6
+    
+    M6[模块6: 服务] --> M6Q1{Enterprise配置}
+    M6Q1 --> M6Q2{服务状态}
+    M6Q2 --> Save
     
     Save[保存文件] --> Validate[验证配置]
     Validate --> Success([完成])

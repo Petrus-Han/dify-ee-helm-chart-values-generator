@@ -2,6 +2,53 @@
 
 ## 最新更新 (2024)
 
+### 插件配置模块新增（模块 5）
+
+1. **独立的插件配置模块**
+   - ✅ 从服务配置模块中分离出插件配置
+   - ✅ 新增模块 5: 插件配置（Plugin Configuration）
+   - ✅ 原服务配置模块调整为模块 6
+
+2. **镜像仓库配置**
+   - ✅ 支持 Docker 和 ECR 两种镜像仓库类型
+   - ✅ ECR 自动生成镜像仓库前缀格式：`{account_id}.dkr.ecr.{region}.amazonaws.com/{prefix}`
+   - ✅ 支持可选的 prefix 部分（如 `dify-ee`）
+
+3. **ECR 鉴权方式**
+   - ✅ IRSA 模式（推荐）：使用 IAM Roles for Service Accounts
+     - 配置 `customServiceAccount` 和 `runnerServiceAccount`
+     - 提供详细的 AWS 文档链接
+   - ✅ K8s Secret 模式：使用 Kubernetes Secret 存储凭证
+     - 配置 `imageRepoSecret`
+     - 提供详细的配置文档链接
+
+4. **配置顺序优化**
+   - ✅ 先选择镜像仓库类型
+   - ✅ ECR 模式：先配置区域和账户ID，再配置镜像仓库前缀
+   - ✅ 然后选择鉴权方式（ECR）或配置 Secret（Docker/ECR K8s Secret）
+   - ✅ 最后选择协议类型（HTTPS/HTTP）
+
+5. **协议类型选择**
+   - ✅ 使用选择方式替代双重否定询问
+   - ✅ 选项1（默认）：HTTPS (推荐)
+   - ✅ 选项2：HTTP (不推荐，仅备选)
+   - ✅ 明确标注 HTTP 为不推荐方案
+
+### 格式保留改进
+
+1. **YAML 格式保留**
+   - ✅ 修复双引号丢失问题
+   - ✅ 修复结构变化问题
+   - ✅ 要求必须安装 ruamel.yaml，未安装时直接报错
+   - ✅ 只在值真正改变时才更新，确保未更新字段完全保留
+
+2. **注释和格式保留**
+   - ✅ 保留所有注释
+   - ✅ 保留原始格式和缩进
+   - ✅ 保留引号格式（双引号/单引号）
+
+## 历史更新 (2024)
+
 ### 全局配置模块改进
 
 1. **密钥自动生成**
