@@ -46,5 +46,10 @@ email-server.txt
 *.tmp
 *.bak
 values-prd.yaml
-dify/*
+
+# Helm charts (submodule or downloaded)
+dify/
 dify-*.tgz
+
+# Generated files
+config.json
