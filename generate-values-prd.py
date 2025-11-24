@@ -123,9 +123,10 @@ Examples:
         try:
             # If chart version is specified via CLI, don't prompt
             prompt_version = args.chart_version is None
-
+            
             # Get or download values.yaml (this will prompt for version if needed)
-            source_file = get_or_download_values(
+            # Returns (source_file, actual_version)
+            source_file, actual_version = get_or_download_values(
                 version=args.chart_version,
                 force_download=args.force_download,
                 prompt_version=prompt_version,
@@ -133,18 +134,8 @@ Examples:
                 repo_name=args.repo_name
             )
 
-            # Extract version from source_file path or use provided version
-            chart_version = args.chart_version
-            if not chart_version:
-                # Extract version from source_file path if it's cached
-                import re
-                match = re.search(r'values-([\d.]+)\.yaml', source_file)
-                if match:
-                    chart_version = match.group(1)
-                else:
-                    # Get latest version
-                    from utils.downloader import get_published_version
-                    chart_version = get_published_version(repo_url=args.repo_url, repo_name=args.repo_name)
+            # Use provided version or actual version from download
+            chart_version = args.chart_version or actual_version
 
             # Download and extract Helm Chart
             if chart_version:

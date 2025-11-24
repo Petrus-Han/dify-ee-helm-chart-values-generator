@@ -429,29 +429,48 @@ def download_and_extract_chart(
         # Download chart using helm pull
         print_info(_t('downloading_chart'))
         chart_ref = f"{repo_name}/{chart_name}"
-        helm_cmd = ["helm", "pull", chart_ref, "--version", version, "--untar", "--untardir", str(extract_path.parent)]
-
-        try:
-            subprocess.check_call(
-                helm_cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE
-            )
-
-            # Helm pull --untar extracts to {chart_name}-{version} directory
-            # We need to rename it to our desired directory name
-            extracted_chart_dir = extract_path.parent / f"{chart_name}-{version}"
-            if extracted_chart_dir.exists() and extracted_chart_dir != extract_path:
-                if extract_path.exists():
-                    shutil.rmtree(extract_path)
-                extracted_chart_dir.rename(extract_path)
-
-            print_success(f"{_t('chart_extracted_to')}: {extract_path}")
-            return str(extract_path)
-
-        except subprocess.CalledProcessError as e:
-            print_error(f"{_t('chart_download_failed')}: {e}")
-            return None
+        
+        # Use a temporary directory for extraction, then move to final location
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            helm_cmd = ["helm", "pull", chart_ref, "--version", version, "--untar", "--untardir", str(temp_path)]
+            
+            try:
+                subprocess.check_call(
+                    helm_cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE
+                )
+                
+                # Helm pull --untar extracts to {chart_name}-{version} directory
+                extracted_chart_dir = temp_path / f"{chart_name}-{version}"
+                if extracted_chart_dir.exists():
+                    # Remove target directory if exists
+                    if extract_path.exists():
+                        shutil.rmtree(extract_path)
+                    # Move extracted directory to final location
+                    extracted_chart_dir.rename(extract_path)
+                    print_success(f"{_t('chart_extracted_to')}: {extract_path}")
+                    return str(extract_path)
+                else:
+                    print_error(f"{_t('chart_extract_error')}: Extracted directory not found: {extracted_chart_dir}")
+                    return None
+                
+            except subprocess.CalledProcessError as e:
+                # Get stderr for better error message
+                try:
+                    result = subprocess.run(
+                        helm_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+                    error_msg = result.stderr.strip() if result.stderr else str(e)
+                    print_error(f"{_t('chart_download_failed')}: {error_msg}")
+                except:
+                    print_error(f"{_t('chart_download_failed')}: {e}")
+                return None
 
     except Exception as e:
         print_error(f"{_t('chart_extract_error')}: {e}")
@@ -601,7 +620,7 @@ def get_or_download_values(
     prompt_version: bool = True,
     repo_url: Optional[str] = None,
     repo_name: Optional[str] = None
-) -> str:
+) -> tuple[str, Optional[str]]:
     """
     Get values.yaml file, download if not exists
 
@@ -613,7 +632,7 @@ def get_or_download_values(
         repo_name: Repository name, defaults to config.HELM_REPO_NAME
 
     Returns:
-        Path to values.yaml file
+        Tuple of (path to values.yaml file, actual version used)
     """
     # Use global config defaults if not provided
     repo_url = repo_url or config.HELM_REPO_URL
@@ -623,25 +642,49 @@ def get_or_download_values(
     local_values = Path(config.LOCAL_VALUES_FILE)
     if local_values.exists() and not force_download:
         print_info(f"{_t('using_local')}: {local_values}")
-        return str(local_values)
+        # Try to get version from cache or use latest
+        actual_version = None
+        cache_path = Path(config.CACHE_DIR)
+        # Check if we can find version from cache files
+        if cache_path.exists():
+            cache_files = list(cache_path.glob("values-*.yaml"))
+            if cache_files:
+                import re
+                for cf in cache_files:
+                    match = re.search(r'values-([\d.]+(?:-[a-zA-Z0-9.]+)?)\.yaml', cf.name)
+                    if match:
+                        actual_version = match.group(1)
+                        break
+        return str(local_values), actual_version
 
     # Prompt for version selection if not specified
+    selected_version = version
     if version is None and prompt_version:
         print_info("")
-        version = prompt_helm_chart_version(repo_url=repo_url, repo_name=repo_name)
+        selected_version = prompt_helm_chart_version(repo_url=repo_url, repo_name=repo_name)
 
     # Check cache
     cache_path = Path(config.CACHE_DIR)
-    if version:
-        cache_file = cache_path / f"values-{version}.yaml"
+    if selected_version:
+        cache_file = cache_path / f"values-{selected_version}.yaml"
     else:
         cache_file = cache_path / "values-latest.yaml"
 
     if cache_file.exists() and not force_download:
         print_info(f"{_t('using_cached')}: {cache_file}")
-        return str(cache_file)
+        return str(cache_file), selected_version
 
     # Download values.yaml
     print_info(_t('not_found_downloading'))
-    return download_values_from_helm_repo(version=version, repo_url=repo_url, repo_name=repo_name)
+    source_file = download_values_from_helm_repo(version=selected_version, repo_url=repo_url, repo_name=repo_name)
+    
+    # Extract actual version from downloaded file
+    actual_version = selected_version
+    if not actual_version:
+        import re
+        match = re.search(r'values-([\d.]+(?:-[a-zA-Z0-9.]+)?)\.yaml', source_file)
+        if match:
+            actual_version = match.group(1)
+    
+    return source_file, actual_version
 
