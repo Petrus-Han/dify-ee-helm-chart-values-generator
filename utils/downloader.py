@@ -343,6 +343,121 @@ def prompt_helm_chart_version(
     return selected
 
 
+def download_and_extract_chart(
+    chart_name: Optional[str] = None,
+    repo_url: Optional[str] = None,
+    version: Optional[str] = None,
+    repo_name: Optional[str] = None,
+    extract_dir: Optional[str] = None
+) -> Optional[str]:
+    """
+    Download and extract Helm Chart to local directory
+
+    Args:
+        chart_name: Chart name, defaults to config.HELM_CHART_NAME
+        repo_url: Helm Chart repository URL, defaults to config.HELM_REPO_URL
+        version: Chart version, if None uses latest version
+        repo_name: Repository name, defaults to config.HELM_REPO_NAME
+        extract_dir: Directory to extract chart, defaults to dify-{version}
+
+    Returns:
+        Path to extracted chart directory, or None if failed
+    """
+    # Use global config defaults if not provided
+    chart_name = chart_name or config.HELM_CHART_NAME
+    repo_url = repo_url or config.HELM_REPO_URL
+    repo_name = repo_name or config.HELM_REPO_NAME
+
+    # Check if helm command is available
+    helm_available = shutil.which("helm") is not None
+    if not helm_available:
+        print_error(_t('helm_not_found'))
+        return None
+
+    try:
+        # Ensure repository is added
+        check_repo_cmd = ["helm", "repo", "list", "-o", "json"]
+        try:
+            repo_list = json.loads(subprocess.check_output(check_repo_cmd, stderr=subprocess.STDOUT).decode())
+            repos = [r.get("name", "") for r in repo_list]
+            if repo_name not in repos:
+                print_info(f"{_t('adding_repo')}: {repo_name}")
+                subprocess.check_call(
+                    ["helm", "repo", "add", repo_name, repo_url],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE
+                )
+            subprocess.check_call(
+                ["helm", "repo", "update", repo_name],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE
+            )
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            try:
+                subprocess.check_call(
+                    ["helm", "repo", "add", repo_name, repo_url],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE
+                )
+                subprocess.check_call(
+                    ["helm", "repo", "update", repo_name],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE
+                )
+            except subprocess.CalledProcessError as e:
+                print_error(f"{_t('add_repo_failed')}: {e}")
+                return None
+
+        # Get actual version if not specified
+        if not version:
+            actual_version = get_published_version(chart_name, repo_url, repo_name)
+            if not actual_version:
+                print_error(_t('failed_to_get_latest_version'))
+                return None
+            version = actual_version
+
+        # Determine extract directory
+        if not extract_dir:
+            extract_dir = f"dify-{version}"
+        extract_path = Path(extract_dir)
+
+        # Check if already extracted
+        if extract_path.exists() and extract_path.is_dir():
+            print_info(f"{_t('chart_already_extracted')}: {extract_path}")
+            return str(extract_path)
+
+        # Download chart using helm pull
+        print_info(_t('downloading_chart'))
+        chart_ref = f"{repo_name}/{chart_name}"
+        helm_cmd = ["helm", "pull", chart_ref, "--version", version, "--untar", "--untardir", str(extract_path.parent)]
+        
+        try:
+            subprocess.check_call(
+                helm_cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE
+            )
+            
+            # Helm pull --untar extracts to {chart_name}-{version} directory
+            # We need to rename it to our desired directory name
+            extracted_chart_dir = extract_path.parent / f"{chart_name}-{version}"
+            if extracted_chart_dir.exists() and extracted_chart_dir != extract_path:
+                if extract_path.exists():
+                    shutil.rmtree(extract_path)
+                extracted_chart_dir.rename(extract_path)
+            
+            print_success(f"{_t('chart_extracted_to')}: {extract_path}")
+            return str(extract_path)
+            
+        except subprocess.CalledProcessError as e:
+            print_error(f"{_t('chart_download_failed')}: {e}")
+            return None
+
+    except Exception as e:
+        print_error(f"{_t('chart_extract_error')}: {e}")
+        return None
+
+
 def download_values_from_helm_repo(
     chart_name: Optional[str] = None,
     repo_url: Optional[str] = None,
