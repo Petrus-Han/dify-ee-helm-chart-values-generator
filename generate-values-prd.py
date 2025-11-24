@@ -119,7 +119,7 @@ Examples:
             print_info(_t('or_manual_download'))
             sys.exit(1)
         print_info(f"{_t('using_local')}: {source_file}")
-        else:
+    else:
         try:
             # If chart version is specified via CLI, don't prompt
             prompt_version = args.chart_version is None
@@ -139,7 +139,7 @@ Examples:
                 match = re.search(r'values-([\d.]+)\.yaml', source_file)
                 if match:
                     chart_version = match.group(1)
-            else:
+                else:
                     # Get latest version
                     from utils.downloader import get_published_version
                     chart_version = get_published_version(repo_url=args.repo_url, repo_name=args.repo_name)
