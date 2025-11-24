@@ -108,7 +108,10 @@ Examples:
     if args.local:
         source_file = config.LOCAL_VALUES_FILE
         if not os.path.exists(source_file):
+            abs_path = os.path.abspath(source_file)
             print_error(f"{_t('file_not_found')}: {source_file}")
+            print_info(_t('local_file_location'))
+            print_info(_t('local_file_location_detail').format(path=abs_path))
             print_info(_t('or_manual_download'))
             sys.exit(1)
         print_info(f"{_t('using_local')}: {source_file}")
@@ -136,6 +139,10 @@ Examples:
             print_error(_t('chart_version_required_for_local'))
             print_info(_t('chart_version_required_help'))
             sys.exit(1)
+
+        # Display version information
+        print_info("")
+        print_info(f"{_t('preparing_version')}: {chart_version}")
     else:
         try:
             # If chart version is specified via CLI, don't prompt
@@ -154,9 +161,13 @@ Examples:
             # Use provided version or actual version from download
             chart_version = args.chart_version or actual_version
 
-            # Download and extract Helm Chart
+            # Display version information
             if chart_version:
                 print_info("")
+                print_info(f"{_t('preparing_version')}: {chart_version}")
+
+            # Download and extract Helm Chart
+            if chart_version:
                 chart_dir = download_and_extract_chart(
                     version=chart_version,
                     repo_url=args.repo_url,

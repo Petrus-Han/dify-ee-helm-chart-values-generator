@@ -424,8 +424,19 @@ def download_and_extract_chart(
 
         # Check if already extracted
         if extract_path.exists() and extract_path.is_dir():
-            print_info(f"{_t('chart_already_extracted')}: {extract_path}")
-            return str(extract_path)
+            print_warning(f"{_t('chart_directory_exists')}: {extract_path}")
+            choice = prompt_choice(
+                _t('chart_directory_exists_prompt'),
+                [_t('use_existing_directory'), _t('overwrite_existing_directory')],
+                default=_t('use_existing_directory')
+            )
+            if choice == _t('use_existing_directory'):
+                print_info(f"{_t('using_existing_directory')}: {extract_path}")
+                return str(extract_path)
+            else:
+                # User chose to overwrite
+                print_info(_t('removing_existing_directory'))
+                shutil.rmtree(extract_path)
 
         # Download chart using helm pull
         print_info(_t('downloading_chart'))
