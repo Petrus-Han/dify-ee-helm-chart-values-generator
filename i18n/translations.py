@@ -43,6 +43,7 @@ TRANSLATIONS = {
         'adding_repo': 'Adding Helm Chart repository',
         'getting_values': 'Getting values.yaml...',
         'detected_version': 'Detected latest version',
+        'detected_version_from_cache': 'Detected version from cache',
         'saved_to': 'values.yaml saved to',
         'using_local': 'Using local values.yaml',
         'using_cached': 'Using cached values.yaml',
@@ -61,7 +62,7 @@ TRANSLATIONS = {
         'selected': 'Selected',
 
         # Generator
-        'generator_title': 'Dify Helm Chart Values Generator',
+        'generator_title': 'Dify EE (Enterprise Edition) Helm Chart Values Generator',
         'guide_message': 'This tool will guide you through configuring values-prd.yaml',
         'helm_chart_version': 'Helm Chart version',
         'target_version': 'Target version',
@@ -373,6 +374,7 @@ TRANSLATIONS = {
         'adding_repo': '添加 Helm Chart 仓库',
         'getting_values': '正在获取 values.yaml...',
         'detected_version': '检测到最新版本',
+        'detected_version_from_cache': '从缓存中检测到版本',
         'saved_to': 'values.yaml 已保存到',
         'using_local': '使用本地 values.yaml',
         'using_cached': '使用缓存的 values.yaml',
@@ -391,7 +393,7 @@ TRANSLATIONS = {
         'selected': '已选择',
 
         # Generator
-        'generator_title': 'Dify Helm Chart Values 生成器',
+        'generator_title': 'Dify EE（企业版）Helm Chart Values 生成器',
         'guide_message': '此工具将引导您完成 values-prd.yaml 的配置',
         'helm_chart_version': 'Helm Chart 版本',
         'target_version': '目标版本',

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dify Helm Chart Values Generator
+Dify EE (Enterprise Edition) Helm Chart Values Generator
 Interactive tool to generate values-prd.yaml configuration file
 
 Module structure and relationships:
@@ -30,7 +30,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Dify Helm Chart Values Generator - Interactive values-prd.yaml generator",
+        description="Dify EE (Enterprise Edition) Helm Chart Values Generator - Interactive values-prd.yaml generator",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -112,12 +112,30 @@ Examples:
             print_info(_t('or_manual_download'))
             sys.exit(1)
         print_info(f"{_t('using_local')}: {source_file}")
-        # When using --local, chart version must be specified
-        if not args.chart_version:
+
+        # Try to get version from CLI argument, cache, or values.yaml
+        chart_version = args.chart_version
+
+        # If not specified, try to extract from cache
+        if not chart_version:
+            from pathlib import Path
+            import re
+            cache_path = Path(config.CACHE_DIR)
+            if cache_path.exists():
+                cache_files = list(cache_path.glob("values-*.yaml"))
+                if cache_files:
+                    for cf in cache_files:
+                        match = re.search(r'values-([\d.]+(?:-[a-zA-Z0-9.]+)?)\.yaml', cf.name)
+                        if match:
+                            chart_version = match.group(1)
+                            print_info(f"{_t('detected_version_from_cache')}: {chart_version}")
+                            break
+
+        # If still not found, require user to specify
+        if not chart_version:
             print_error(_t('chart_version_required_for_local'))
             print_info(_t('chart_version_required_help'))
             sys.exit(1)
-        chart_version = args.chart_version
     else:
         try:
             # If chart version is specified via CLI, don't prompt
