@@ -26,6 +26,7 @@ This project provides a Python script `generate-values-prd.py` that interactivel
 - ✅ **RAG Integration**: Automatically handles RAG type and unstructured module relationships
 - ✅ **Interactive Guidance**: User-friendly CLI interface with detailed configuration for databases and Redis connections
 - ✅ **Progress Preservation**: Supports saving partial configuration after interruption
+- ✅ **Automated PR Review**: GitHub Actions bot automatically reviews PRs for code quality, formatting, and security issues
 
 ## 🚀 Quick Start
 
@@ -195,6 +196,18 @@ The script automatically handles the following relationships:
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+### Automated PR Review
+
+This project uses an automated PR review bot powered by GitHub Actions. When you create or update a Pull Request, the bot will automatically:
+
+- Check Python code style (flake8, pylint)
+- Verify code formatting (black)
+- Validate YAML files (yamllint)
+- Check shell scripts (shellcheck)
+- Scan for potential security issues
+
+See [docs/PR-REVIEW.md](docs/PR-REVIEW.md) for more details.
 
 ## 📝 License
 
