@@ -57,6 +57,7 @@ values-prd.yaml
 # Helm charts (submodule or downloaded)
 dify/
 dify-*.tgz
+dify-*/
 
 # Generated files
 config.json

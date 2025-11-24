@@ -7,6 +7,7 @@ import shutil
 import json
 import urllib.request
 import yaml
+import tarfile
 from typing import Optional, List
 from pathlib import Path
 
@@ -153,7 +154,7 @@ def get_published_versions(
 ) -> List[str]:
     """
     Get published versions using Helm command
-    
+
     This function uses Helm command to get versions that are actually published and available.
 
     Args:

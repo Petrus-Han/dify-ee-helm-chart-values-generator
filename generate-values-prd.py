@@ -19,6 +19,8 @@ import config
 from i18n import set_language, get_translator
 from i18n.language import prompt_language_selection
 from utils import print_info, print_error, print_warning, get_or_download_values
+from utils.downloader import download_and_extract_chart
+from utils.downloader import download_and_extract_chart
 from version_manager import VersionManager
 from generator import ValuesGenerator
 
@@ -102,7 +104,7 @@ Examples:
     # Language selection
     if args.lang:
         set_language(args.lang)
-    else:
+        else:
         # Interactive language selection
         prompt_language_selection()
 
@@ -117,7 +119,7 @@ Examples:
             print_info(_t('or_manual_download'))
             sys.exit(1)
         print_info(f"{_t('using_local')}: {source_file}")
-    else:
+        else:
         try:
             # If chart version is specified via CLI, don't prompt
             prompt_version = args.chart_version is None
@@ -128,6 +130,28 @@ Examples:
                 repo_url=args.repo_url,
                 repo_name=args.repo_name
             )
+
+            # Download and extract Helm Chart
+            chart_version = args.chart_version
+            if not chart_version:
+                # Extract version from source_file path if it's cached
+                import re
+                match = re.search(r'values-([\d.]+)\.yaml', source_file)
+                if match:
+                    chart_version = match.group(1)
+            else:
+                    # Get latest version
+                    from utils.downloader import get_published_version
+                    chart_version = get_published_version(repo_url=args.repo_url, repo_name=args.repo_name)
+
+            if chart_version:
+                chart_dir = download_and_extract_chart(
+                    version=chart_version,
+                    repo_url=args.repo_url,
+                    repo_name=args.repo_name
+                )
+                if chart_dir:
+                    print_info(f"{_t('chart_directory')}: {chart_dir}")
         except KeyboardInterrupt:
             print("\n")
             print_warning(_t('user_interrupted'))
@@ -144,7 +168,7 @@ Examples:
     if not os.path.exists(source_file):
         print_error(f"{_t('file_not_found')}: {source_file}")
         sys.exit(1)
-
+    
     # Select Dify EE version
     if args.ee_version:
         ee_version = args.ee_version
